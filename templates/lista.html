@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load tz %}
+
+{% block title %}Lista de Alunos{% endblock title %}
+
+{% block content %}
+   <h2>Lista de Alunos</h2>
+   {%if alunos %}
+      <ul>
+          {% for Aluno in alunos %}
+          <li>
+              {{Aluno.nome}},{{Aluno.matricula}},{{Aluno.criado_em|localtime|date:'d/m/Y H:i:'}}
+          </li>
+          {% endfor %}
+      </ul>
+   {% else %}
+      <p>Nenhum Aluno encontrado</p>
+   {% endif %}
+{% endblock %}
