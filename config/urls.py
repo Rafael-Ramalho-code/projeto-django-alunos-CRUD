@@ -4,5 +4,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('', include('app.urls')), #inclui a rota dos app
+    path('aluno/', include('app.urls')), #inclui a rota dos app
 ]
