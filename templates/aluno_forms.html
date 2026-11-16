@@ -3,7 +3,7 @@
 {% block title %}{% if aluno %}Editar Aluno{% else %}Novo Aluno{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container py-5">
+<div class="container py-4">
   <div class="row justify-content-center">
     <div class="col-12 col-md-10 col-lg-6">
       <div class="card shadow-sm">
@@ -12,52 +12,24 @@
         </div>
 
         <div class="card-body">
-          {% if erro %}
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-              <strong>Erro:</strong> {{ erro }}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-            </div>
-          {% endif %}
-
-          <form id="produtoForm" action="{% if aluno %}{% url 'atualizar_alunos' aluno.id %}{% else %}{% url 'novo_alunos' %}{% endif %}" method='post' class="needs-validation" novalidate>
+          <form method="post" novalidate>
             {% csrf_token %}
 
+            {% for erro in form.non_field_errors %}
+              <div class="alert alert-danger">{{ erro }}</div>
+            {% endfor %}
+
             <div class="mb-3">
-              <label for="nome_id" class="form-label">Nome do Aluno</label>
-              <input
-                type="text"
-                name="nome"
-                id="nome_id"
-                class="form-control"
-                placeholder="Exemplo, Bruno, João, ETC..."
-                required
-                autofocus
-                maxlength="120"
-                value="{{ aluno.nome|default_if_none:'' }}"
-              >
-              <div class="form-text">Use um nome claro e descritivo.</div>
-              <div class="invalid-feedback">Informe o nome do produto.</div>
+              <label for="{{ form.nome.id_for_label }}" class="form-label">Nome do aluno</label>
+              {{ form.nome }}
+              {% for erro in form.nome.errors %}<div class="text-danger small mt-1">{{ erro }}</div>{% endfor %}
             </div>
 
             <div class="mb-3">
-              <label for="valor_id" class="form-label">Matrícula do Aluno</label>
-              <div class="input-group">
-                <span class="input-group-text">#</span>
-                <input
-                  type="number"
-                  name="matricula"
-                  id="valor_id"
-                  class="form-control"
-                  placeholder="0"
-                  min="0"
-                  step="0.01"
-                  required
-                  inputmode="number"
-                  value="{{ produto.preco|default_if_none:''|cut:',' }}"
-                >
-              </div>
-              <div class="form-text">Digite somente números</div>
-              <div class="invalid-feedback">Informe um valor válido.</div>
+              <label for="{{ form.matricula.id_for_label }}" class="form-label">Matrícula</label>
+              {{ form.matricula }}
+              <div class="form-text">Somente números.</div>
+              {% for erro in form.matricula.errors %}<div class="text-danger small mt-1">{{ erro }}</div>{% endfor %}
             </div>
 
             <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
@@ -66,92 +38,8 @@
             </div>
           </form>
         </div>
-
-        <div class="card-footer text-muted small">
-          Campos marcados como obrigatórios devem ser preenchidos.
-        </div>
       </div>
     </div>
   </div>
 </div>
-
-<script>
-  // Validação simples do Bootstrap no lado do cliente
-  (function () {
-    'use strict';
-    const forms = document.querySelectorAll('.needs-validation');
-    Array.prototype.slice.call(forms).forEach(function (form) {
-      form.addEventListener('submit', function (event) {
-        if (!form.checkValidity()) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        form.classList.add('was-validated');
-      }, false);
-    });
-  })();
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("produtoForm");
-  if (!form) return;
-
-  // Normaliza a URL do action e extrai o pathname
-  const actionUrl = new URL(form.action, window.location.origin);
-  const path = actionUrl.pathname;
-
-  // Considera edição quando a rota for /produtos/<id>/ com ou sem barra final
-  const idMatch = path.match(/^\/aluno\/(\d+)\/?$/);
-  const isEditing = Boolean(idMatch);
-
-  // Validação Bootstrap e submit via fetch
-  form.addEventListener("submit", async (event) => {
-    // Validação nativa + classes do Bootstrap
-    if (!form.checkValidity()) {
-      event.preventDefault();
-      event.stopPropagation();
-      form.classList.add("was-validated");
-      return;
-    }
-
-    event.preventDefault();
-
-    const url = form.action;
-    const formData = new FormData(form);
-    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
-
-    const method = isEditing ? "PUT" : "POST";
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "X-CSRFToken": csrfToken
-          // Não defina Content-Type quando enviar FormData
-        },
-        body: formData,
-        credentials: "same-origin"
-      });
-
-      if (response.ok) {
-        alert(isEditing ? "Aluno atualizado com sucesso" : "Aluno criado com sucesso");
-        window.location.href = "{% url 'lista_alunos' %}";
-      } else {
-        // Tenta extrair detalhes do backend
-        let detail = "";
-        try {
-          const data = await response.json();
-          detail = data?.detail || data?.message || "";
-        } catch {}
-        alert(`Erro ao salvar o produto. Código: ${response.status}${detail ? ". " + detail : ""}`);
-      }
-    } catch (error) {
-      console.error("Erro na requisição:", error);
-      alert("Falha na conexão com o servidor.");
-    } finally {
-      form.classList.add("was-validated");
-    }
-  });
-});
-</script>
 {% endblock %}

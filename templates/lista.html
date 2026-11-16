@@ -4,8 +4,18 @@
 {% block title %}Lista de Alunos{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h2 class="mb-4 text-center">Lista de Alunos</h2>
+<div class="container mt-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-4">
+        <h2 class="mb-0">Alunos</h2>
+        <a href="{% url 'novo_alunos' %}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Novo aluno</a>
+    </div>
+
+    <form method="get" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="q" value="{{ busca }}" class="form-control" placeholder="Buscar por nome ou matrícula">
+            <button class="btn btn-outline-secondary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </div>
+    </form>
 
     {% if alunos %}
         <ul class="list-group shadow-sm">
@@ -14,113 +24,55 @@
                     <div>
                         <strong>{{ aluno.nome }}</strong><br>
                         <small class="text-muted">
-                            Criado em: {{ aluno.criado_em|localtime|date:"d/m/Y H:i" }}
+                            Cadastrado em {{ aluno.criado_em|localtime|date:"d/m/Y H:i" }}
                         </small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary rounded-pill">
-                             #{{ aluno.matricula }}
-                        </span>
-                        <a class="btn btn-outline-success btn-sm" href="{% url 'atualizar_alunos' aluno.id %}"><i class="fa-solid fa-pencil"></i></a>
-                        <a class="btn btn-outline-danger btn-sm delete-btn" href="{% url 'deletar_alunos' aluno.id %}" data-bs-toggle="modal" data-bs-target="#deleteProdutoModal" data-id="{{ aluno.id }}" data-type="aluno"><i class="fa-solid fa-trash"></i></a>
+                        <span class="badge bg-primary rounded-pill">#{{ aluno.matricula }}</span>
+                        <a class="btn btn-outline-success btn-sm" href="{% url 'atualizar_alunos' aluno.id %}" title="Editar">
+                            <i class="fa-solid fa-pencil"></i>
+                        </a>
+                        <button type="button" class="btn btn-outline-danger btn-sm" title="Excluir"
+                                data-bs-toggle="modal" data-bs-target="#modalExcluir"
+                                data-url="{% url 'deletar_alunos' aluno.id %}" data-nome="{{ aluno.nome }}">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </div>
                 </li>
             {% endfor %}
         </ul>
+    {% elif busca %}
+        <div class="alert alert-secondary text-center mt-4">Nenhum aluno encontrado para "{{ busca }}".</div>
     {% else %}
-        <div class="alert alert-warning text-center mt-4" role="alert">
-            Nenhum produto cadastrado.
-        </div>
+        <div class="alert alert-warning text-center mt-4">Nenhum aluno cadastrado ainda.</div>
     {% endif %}
 </div>
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteProdutoModal" tabindex="-1" aria-labelledby="deleteProdutoModalLabel" aria-hidden="true">
+
+<!-- Modal de confirmação: o formulário recebe a URL do aluno clicado -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-labelledby="modalExcluirLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
+    <form method="post" id="formExcluir" class="modal-content">
+      {% csrf_token %}
       <div class="modal-header">
-        <h1 class="modal-title fs-5" id="deleteProdutoModalLabel">Confirmar exclusão</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h1 class="modal-title fs-5" id="modalExcluirLabel">Confirmar exclusão</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-          <p>Tem certeza de que deseja excluir este registro?</p>
+        <p class="mb-0">Excluir <strong id="nomeExcluir"></strong>? Essa ação não pode ser desfeita.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" id="confirmDeleteBtn" class="btn btn-primary">Excluir</button>
+        <button type="submit" class="btn btn-danger">Excluir</button>
       </div>
-    </div>
+    </form>
   </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const deleteButtons = document.querySelectorAll(".delete-btn");
-  const modalEl = document.getElementById("deleteProdutoModal");
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-
-  let deleteUrl = null;
-  let rowToRemove = null;
-
-  // Utilitário para pegar o CSRF do cookie se necessário
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(";").shift();
-    return null;
-  }
-
-  deleteButtons.forEach(button => {
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      deleteUrl = button.getAttribute("href");
-      rowToRemove = button.closest("li");
-
-      // Também poderia ler data-id, se quiser exibir no modal
-      // const deleteId = button.dataset.id;
-
-      modal.show();
-    });
+  document.getElementById('modalExcluir').addEventListener('show.bs.modal', function (event) {
+    const botao = event.relatedTarget;
+    document.getElementById('formExcluir').action = botao.dataset.url;
+    document.getElementById('nomeExcluir').textContent = botao.dataset.nome;
   });
-
-  confirmDeleteBtn.addEventListener("click", async () => {
-    if (!deleteUrl) return;
-
-    // Tenta achar o token no template, cai para o cookie se necessário
-    const csrfFromInput = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
-    const csrfToken = csrfFromInput || getCookie("csrftoken") || "";
-
-    try {
-      const response = await fetch(deleteUrl, {
-        method: "DELETE",
-        headers: { "X-CSRFToken": csrfToken },
-        credentials: "same-origin"
-      });
-
-      if (response.ok) {
-        modal.hide();
-
-        // Remoção otimista do item, melhora a UX
-        if (rowToRemove) {
-          rowToRemove.remove();
-        } else {
-          window.location.reload();
-        }
-      } else {
-        alert(`Erro ao excluir. Código: ${response.status}`);
-      }
-    } catch (error) {
-      console.error("Erro ao enviar DELETE:", error);
-      alert("Falha na conexão com o servidor.");
-    } finally {
-      // Limpa contexto para evitar reuso acidental
-      deleteUrl = null;
-      rowToRemove = null;
-    }
-  });
-});
 </script>
-
 {% endblock %}
